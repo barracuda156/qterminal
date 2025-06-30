@@ -20,20 +20,21 @@
 #define PROPERTIESDIALOG_H
 
 #include <QStyledItemDelegate>
-#include <QKeySequenceEdit>
+#include <QLineEdit>
 #include <QPushButton>
+
 #include "ui_propertiesdialog.h"
 
-class KeySequenceEdit : public QKeySequenceEdit
+class KeySequenceEdit : public QLineEdit
 {
     Q_OBJECT
 
 public:
-    KeySequenceEdit(QWidget *parent = nullptr) : QKeySequenceEdit(parent) {}
+    KeySequenceEdit(QWidget *parent = nullptr) : QLineEdit(parent) {}
 
     // to be used with Tab and Backtab
     void pressKey(QKeyEvent *event) {
-        QKeySequenceEdit::keyPressEvent(event);
+        QLineEdit::keyPressEvent(event);
     }
 
 protected:
@@ -84,12 +85,13 @@ class PropertiesDialog : public QDialog, Ui::PropertiesDialog
         void chooseBackgroundImageButton_clicked();
         void bookmarksPathEdited();
         void bookmarksButton_clicked();
+        void saveSizeOnExitStateChanged(int state);
+        void getCurrentSizeClicked();
+        void onRejected();
 
     protected:
         void setupShortcuts();
         void saveShortcuts();
 };
 
-
 #endif
-

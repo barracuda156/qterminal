@@ -23,23 +23,10 @@ endif()
 # Minimum Versions
 set(LXQTBT_MINIMUM_VERSION "0.13.0")
 set(QTERMWIDGET_MINIMUM_VERSION "1.4.0")
-set(QT_MINIMUM_VERSION "5.15.0")
 
-find_package(Qt5Gui ${QT_MINIMUM_VERSION} REQUIRED)
-find_package(Qt5LinguistTools ${QT_MINIMUM_VERSION} REQUIRED)
-find_package(Qt5Widgets ${QT_MINIMUM_VERSION} REQUIRED)
-if(UNIX)
-    find_package(Qt5DBus ${QT_MINIMUM_VERSION} REQUIRED)
-    if (NOT APPLE)
-        find_package(Qt5X11Extras ${QT_MINIMUM_VERSION} REQUIRED)
-    endif (NOT APPLE)
-endif()
-find_package(QTermWidget5 ${QTERMWIDGET_MINIMUM_VERSION} REQUIRED)
+find_package(Qt4 COMPONENTS QtCore QtGui QtXml QtDBus REQUIRED)
+find_package(QTermWidget4 ${QTERMWIDGET_MINIMUM_VERSION} REQUIRED)
 find_package(lxqt-build-tools ${LXQTBT_MINIMUM_VERSION} REQUIRED)
-
-if (BUILD_TESTS)
-    find_package(Qt5 ${QT_MINIMUM_VERSION} CONFIG REQUIRED Test)
-endif()
 
 include(LXQtPreventInSourceBuilds)
 include(FindPkgConfig)
@@ -53,13 +40,9 @@ message(STATUS "Qt version: ${Qt5Core_VERSION}")
 message(STATUS "Using bundled Qxt...")
 set(QXT_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src/third-party")
 
-
 if(APPLE)
    find_library(CARBON_LIBRARY Carbon REQUIRED)
    message(STATUS "CARBON_LIBRARY: ${CARBON_LIBRARY}")
-elseif(UNIX)
-   find_package(X11 REQUIRED)
-   message(STATUS "X11_X11_LIB: ${X11_X11_LIB}")
 endif()
 
 add_definitions(
@@ -98,26 +81,22 @@ set(QTERM_MOC_SRC
     src/tab-switcher.h
 )
 
-if (Qt5DBus_FOUND)
+if (QtDBus_FOUND)
     add_definitions(-DHAVE_QDBUS)
-    QT5_ADD_DBUS_ADAPTOR(QTERM_SRC src/org.lxqt.QTerminal.Window.xml mainwindow.h MainWindow)
-    QT5_ADD_DBUS_ADAPTOR(QTERM_SRC src/org.lxqt.QTerminal.Tab.xml termwidgetholder.h TermWidgetHolder)
-    QT5_ADD_DBUS_ADAPTOR(QTERM_SRC src/org.lxqt.QTerminal.Terminal.xml termwidget.h TermWidget)
-    QT5_ADD_DBUS_ADAPTOR(QTERM_SRC src/org.lxqt.QTerminal.Process.xml qterminalapp.h QTerminalApp)
+    qt4_add_dbus_adaptor(QTERM_SRC src/org.lxqt.QTerminal.Window.xml mainwindow.h MainWindow)
+    qt4_add_dbus_adaptor(QTERM_SRC src/org.lxqt.QTerminal.Tab.xml termwidgetholder.h TermWidgetHolder)
+    qt4_add_dbus_adaptor(QTERM_SRC src/org.lxqt.QTerminal.Terminal.xml termwidget.h TermWidget)
+    qt4_add_dbus_adaptor(QTERM_SRC src/org.lxqt.QTerminal.Process.xml qterminalapp.h QTerminalApp)
     set(QTERM_MOC_SRC ${QTERM_MOC_SRC} src/dbusaddressable.h)
-    message(STATUS "Building with Qt5DBus support")
+    message(STATUS "Building with QtDBus support")
 endif()
 
 if(NOT QXT_FOUND)
     set(QTERM_SRC ${QTERM_SRC} src/third-party/qxtglobalshortcut.cpp)
     set(QTERM_MOC_SRC ${QTERM_MOC_SRC} src/third-party/qxtglobalshortcut.h)
 
-    if(WIN32)
-        set(QTERM_SRC ${QTERM_SRC} src/third-party/qxtglobalshortcut_win.cpp)
-    elseif(APPLE)
+    if(APPLE)
         set(QTERM_SRC ${QTERM_SRC} src/third-party/qxtglobalshortcut_mac.cpp)
-    else()
-        set(QTERM_SRC ${QTERM_SRC} src/third-party/qxtglobalshortcut_x11.cpp)
     endif()
 endif()
 
@@ -132,9 +111,9 @@ set(QTERM_RCC_SRC
     src/icons.qrc
 )
 
-qt5_wrap_ui( QTERM_UI ${QTERM_UI_SRC} )
-qt5_wrap_cpp( QTERM_MOC ${QTERM_MOC_SRC} )
-qt5_add_resources( QTERM_RCC ${QTERM_RCC_SRC} )
+qt4_wrap_ui( QTERM_UI ${QTERM_UI_SRC} )
+qt4_wrap_cpp( QTERM_MOC ${QTERM_MOC_SRC} )
+qt4_add_resources( QTERM_RCC ${QTERM_RCC_SRC} )
 lxqt_translate_ts(QTERM_QM
     UPDATE_TRANSLATIONS
         ${UPDATE_TRANSLATIONS}
@@ -162,7 +141,6 @@ include_directories(
 if(X11_FOUND)
     include_directories("${X11_INCLUDE_DIR}")
 endif()
-
 
 # TODO/FIXME: apple bundle
 set(GUI_TYPE "")
@@ -202,22 +180,20 @@ add_executable(${EXE_NAME} ${GUI_TYPE}
 )
 
 target_link_libraries(${EXE_NAME}
-    Qt5::Gui
-    qtermwidget5
+    Qt4::QtGui
+    qtermwidget4
     util
 )
 if(QXT_FOUND)
     target_link_libraries(${EXE_NAME} ${QXT_CORE_LIB} ${QXT_GUI_LIB})
 endif()
 
-if (Qt5DBus_FOUND)
-    target_link_libraries(${EXE_NAME} ${Qt5DBus_LIBRARIES})
+if (QtDBus_FOUND)
+    target_link_libraries(${EXE_NAME} ${QtDBus_LIBRARIES})
 endif()
 
 if(APPLE)
     target_link_libraries(${EXE_NAME} ${CARBON_LIBRARY})
-elseif(UNIX)
-    target_link_libraries(${EXE_NAME} Qt5::X11Extras)
 endif()
 
 if(X11_FOUND)

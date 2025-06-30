@@ -33,15 +33,11 @@
 
 #include "qxtglobalshortcut.h"
 #include <QAbstractEventDispatcher>
-#include <QAbstractNativeEventFilter>
 #include <QKeySequence>
 #include <QHash>
 
 
 class QxtGlobalShortcutPrivate : public QxtPrivate<QxtGlobalShortcut>
-#if !defined(Q_OS_MAC)
-        ,public QAbstractNativeEventFilter
-#endif
 {
 public:
     QXT_DECLARE_PUBLIC(QxtGlobalShortcut)

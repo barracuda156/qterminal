@@ -57,14 +57,13 @@ public:
 protected:
     void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const override
     {
-        QStyle *style = option.widget ? option.widget->style() : QApplication::style();
+        QStyle *style = QApplication::style();
 
         QString text = index.model()->data(index, static_cast<int>(AppRole::Display)).toString();
 
         QStyleOptionViewItem opt = option;
         initStyleOption(&opt, index);
-        opt.text = text;
-        style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, option.widget);
+        style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, NULL);
     }
 
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
@@ -72,10 +71,8 @@ protected:
         QStyleOptionViewItem opt = option;
         initStyleOption(&opt, index);
         opt.decorationSize = QSize(0, 0);
-        opt.text = index.model()->data(index, static_cast<int>(AppRole::Display)).toString();;
-        const QWidget* widget = option.widget;
-        QStyle* style = widget ? widget->style() : QApplication::style();
-        QSize contSize = style->sizeFromContents(QStyle::CT_ItemViewItem, &opt, QSize(), widget);
+        QStyle* style = QApplication::style();
+        QSize contSize = style->sizeFromContents(QStyle::CT_ItemViewItem, &opt, QSize(), 0);
 
         return QSize(
             mParent ? qMin(mParent->width() - 2 * mFrameWidth, contSize.width()) : contSize.width(),
@@ -101,7 +98,7 @@ TabSwitcher::TabSwitcher(TabWidget* tabs):
     m_timer->setInterval(100);
     m_timer->setSingleShot(true);
 
-    connect(m_timer, &QTimer::timeout, this, &TabSwitcher::timer);
+    connect(m_timer, SIGNAL(timeout()), this, SLOT(timer()));
 }
 
 TabSwitcher::~TabSwitcher()
@@ -127,7 +124,6 @@ void TabSwitcher::showSwitcher()
         if (i > maxApp)
             break;
     }
-
 
     w += 2 * frameWidth();
     h += 2 * frameWidth();
@@ -182,4 +178,3 @@ void TabSwitcher::closeEvent(QCloseEvent *)
 }
 
 // -----------------------------------------------------------------------------------------------------------
-

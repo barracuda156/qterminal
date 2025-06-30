@@ -22,19 +22,16 @@
 #include "ui_fontdialog.h"
 #include "properties.h"
 
-
-
 class FontDialog : public QDialog, public Ui::FontDialog
 {
     Q_OBJECT
 public:
-    FontDialog(const QFont &f);
+    explicit FontDialog(const QFont &f);
     QFont getFont();
 
 private slots:
     void setFontSample(const QFont &f);
     void setFontSize();
-
 };
 
 #endif

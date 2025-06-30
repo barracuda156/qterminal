@@ -40,6 +40,7 @@ class TabSwitcher;
 class TabWidget : public QTabWidget
 {
 Q_OBJECT
+
 public:
     TabWidget(QWidget* parent = nullptr);
     ~TabWidget() override;
@@ -97,6 +98,7 @@ public slots:
 
     void switchToNext();
     void switchToPrev();
+
 signals:
     void closeLastTabNotification();
     void tabRenameRequested(int);
@@ -113,6 +115,7 @@ protected:
         renaming or new tab opening
      */
     bool eventFilter(QObject *obj, QEvent *event) override;
+
 protected slots:
     void updateTabIndices();
     void onTermTitleChanged(const QString& title, const QString& icon);
@@ -126,8 +129,6 @@ private:
     TabBar *mTabBar;
     QScopedPointer<TabSwitcher> mSwitcher;
     QList<QWidget*> mHistory;
-
-    QMetaObject::Connection mFocusConnection;
 };
 
 #endif

@@ -34,10 +34,10 @@ FontDialog::FontDialog(const QFont &f)
 
     setFontSample(f);
 
-    connect(fontComboBox, &QFontComboBox::currentFontChanged,
-            this, &FontDialog::setFontSample);
-    connect(sizeSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged),
-            this, &FontDialog::setFontSize);
+    connect(fontComboBox, SIGNAL(currentFontChanged(const QFont &)),
+        this, SLOT(setFontSample(const QFont &)));
+    connect(sizeSpinBox, SIGNAL(valueChanged(int)),
+        this, SLOT(setFontSize()));
 }
 
 QFont FontDialog::getFont()

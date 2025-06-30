@@ -15,50 +15,61 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
-#include <QRegularExpression>
+#include <QRegExp>
 
 #include "qterminalutils.h"
 
 QStringList parse_command(const QString& str)
 {
-    const QRegularExpression separator(QString::fromLatin1(R"('|(?<!\\)(\\{2})*(\s|")|\z)"));
-    const QRegularExpression doubleQuote(QString::fromLatin1(R"((?<!\\)(\\{2})*")"));
-    const QRegularExpression escapedSpace(QString::fromLatin1(R"(\\(\\{2})*\s)"));
-    const QRegularExpression singleQuote(QStringLiteral("'"));
+    // These are simplified and may not fully match all edge cases
+    QRegExp separator(QLatin1String("'|\\s|\"|$"));
+    QRegExp doubleQuote(QLatin1String("\""));
+    QRegExp escapedSpace(QLatin1String("\\\\s"));
+    QRegExp singleQuote(QLatin1String("'"));
 
     QStringList list;
-    QRegularExpressionMatch match;
     int index = 0;
-    int nextIndex;
-    while((nextIndex = str.indexOf(separator, index, &match)) != -1)
+    int nextIndex = 0;
+    while ((nextIndex = separator.indexIn(str, index)) != -1)
     {
         if (nextIndex > index)
         {
-            list << str.mid(index, nextIndex - index).replace(escapedSpace, QStringLiteral(" "));
+            QString part = str.mid(index, nextIndex - index);
+            part.replace(escapedSpace, QLatin1String(" "));
+            list << part;
         }
-        if (match.capturedLength() == 0)
-        { // end of string ("\z") is matched
+        if (separator.cap(0).isEmpty())
+        { // end of string
             break;
         }
-        index = nextIndex + match.capturedLength();
-        auto c = str.at(index - 1); // last matched character
+        index = nextIndex + separator.matchedLength();
+        QChar c = str.at(index - 1);
         if (!c.isSpace())
-        { // a single quote or an unescaped double quote is matched
-            nextIndex = str.indexOf(c == QLatin1Char('\'') ? singleQuote : doubleQuote, index, &match);
-            if (nextIndex == -1)
-            { // the quote is not closed
+        {
+            int quoteIndex = -1;
+            if (c == QLatin1Char('\''))
+            {
+                quoteIndex = singleQuote.indexIn(str, index);
+            }
+            else
+            {
+                quoteIndex = doubleQuote.indexIn(str, index);
+            }
+            if (quoteIndex == -1)
+            {
                 break;
             }
             else
             {
-                if (nextIndex > index)
+                if (quoteIndex > index)
                 {
-                    list << str.mid(index, nextIndex - index).replace(escapedSpace, QStringLiteral(" "));
+                    QString part = str.mid(index, quoteIndex - index);
+                    part.replace(escapedSpace, QLatin1String(" "));
+                    list << part;
                 }
-                index = nextIndex + match.capturedLength();
+                index = quoteIndex + (c == QLatin1Char('\'') ? singleQuote.matchedLength() : doubleQuote.matchedLength());
             }
         }
     }
     return list;
 }
-

@@ -23,9 +23,8 @@
 #include "termwidget.h"
 #include "terminalconfig.h"
 #include "dbusaddressable.h"
+
 class QSplitter;
-
-
 
 typedef enum NavigationDirection {
     Left,
@@ -33,7 +32,6 @@ typedef enum NavigationDirection {
     Top,
     Bottom
 } NavigationDirection;
-
 
 /*! \brief TermWidget group/session manager.
 
@@ -72,7 +70,6 @@ class TermWidgetHolder : public QWidget
         void closeTab();
         #endif
 
-
     public slots:
         void splitHorizontal(TermWidget * term);
         void splitVertical(TermWidget * term);
@@ -103,4 +100,3 @@ class TermWidgetHolder : public QWidget
 };
 
 #endif
-

@@ -39,7 +39,7 @@
 TermWidgetHolder::TermWidgetHolder(TerminalConfig &config, QWidget * parent)
     : QWidget(parent)
       #ifdef HAVE_QDBUS
-      , DBusAddressable(QStringLiteral("/tabs"))
+      , DBusAddressable(QLatin1String("/tabs"))
       #endif
 {
     #ifdef HAVE_QDBUS
@@ -201,7 +201,7 @@ void TermWidgetHolder::directionalNavigation(NavigationDirection dir) {
     // Find an active widget
     QList<TermWidget*> l = findChildren<TermWidget*>();
     int ix = -1;
-    for (TermWidget * w : qAsConst(l))
+    foreach (TermWidget * w, l)
     {
         ++ix;
         if (w->impl()->hasFocus())
@@ -233,7 +233,7 @@ void TermWidgetHolder::directionalNavigation(NavigationDirection dir) {
     int lowestX = INT_MAX;
     int lowestMidpointDistance = INT_MAX;
     TermWidget *fittest = nullptr;
-    for (TermWidget * w : qAsConst(l))
+    foreach (TermWidget * w, l)
     {
         NavigationData contenderDims = getNormalizedDimensions(w, dir);
         int midpointDistance = std::min(
@@ -287,13 +287,13 @@ void TermWidgetHolder::splitCollapse(TermWidget * term)
     term->setParent(nullptr);
     delete term;
 
-    QWidget *nextFocus = Q_NULLPTR;
+    QWidget *nextFocus = nullptr;
 
     // Collapse splitters containing a single element, excluding the top one.
     if (parent->count() == 1)
     {
         QSplitter *uselessSplitterParent = qobject_cast<QSplitter*>(parent->parent());
-        if (uselessSplitterParent != Q_NULLPTR) {
+        if (uselessSplitterParent != nullptr) {
             int idx = uselessSplitterParent->indexOf(parent);
             assert(idx != -1);
             QWidget *singleHeir = parent->widget(0);
@@ -361,18 +361,16 @@ TermWidget *TermWidgetHolder::newTerm(TerminalConfig &cfg)
 {
     TermWidget *w = new TermWidget(cfg, this);
     // proxy signals
-    connect(w, &TermWidget::renameSession, this, &TermWidgetHolder::renameSession);
-    connect(w, &TermWidget::removeCurrentSession, this, &TermWidgetHolder::lastTerminalClosed);
-    connect(w, &TermWidget::finished, this, &TermWidgetHolder::handle_finished);
-    // consume signals
+    connect(w, SIGNAL(renameSession(int)), this, SLOT(renameSession(int)));
+    connect(w, SIGNAL(removeCurrentSession()), this, SIGNAL(lastTerminalClosed()));
+    connect(w, SIGNAL(finished()), this, SLOT(handle_finished()));
 
-    connect(w, static_cast<void (TermWidget::*)(TermWidget *self)>(&TermWidget::splitHorizontal),
-            this, &TermWidgetHolder::splitHorizontal);
-    connect(w, static_cast<void (TermWidget::*)(TermWidget *self)>(&TermWidget::splitVertical),
-            this, &TermWidgetHolder::splitVertical);
-    connect(w, &TermWidget::splitCollapse, this, &TermWidgetHolder::splitCollapse);
-    connect(w, &TermWidget::termGetFocus, this, &TermWidgetHolder::setCurrentTerminal);
-    connect(w, &TermWidget::termTitleChanged, this, &TermWidgetHolder::onTermTitleChanged);
+    // Overloaded signals/slots with TermWidget*
+    connect(w, SIGNAL(splitHorizontal(TermWidget*)), this, SLOT(splitHorizontal(TermWidget*)));
+    connect(w, SIGNAL(splitVertical(TermWidget*)), this, SLOT(splitVertical(TermWidget*)));
+    connect(w, SIGNAL(splitCollapse(TermWidget*)), this, SLOT(splitCollapse(TermWidget*)));
+    connect(w, SIGNAL(termGetFocus(TermWidget*)), this, SLOT(setCurrentTerminal(TermWidget*)));
+    connect(w, SIGNAL(termTitleChanged(QString,QString)), this, SLOT(onTermTitleChanged(QString,QString)));
 
     return w;
 }
@@ -390,7 +388,6 @@ void TermWidgetHolder::setCurrentTerminal(TermWidget* term)
         {
             Q_EMIT termTitleChanged(windowTitle(), QString{});
         }
-        Q_EMIT termFocusChanged();
     }
 }
 
@@ -447,4 +444,3 @@ void TermWidgetHolder::closeTab()
 }
 
 #endif
-

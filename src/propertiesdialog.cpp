@@ -23,7 +23,9 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScreen>
-#include <QWindow>
+#include <QWidget>
+#include <QDesktopWidget>
+#include <QtAlgorithms>
 
 #include "propertiesdialog.h"
 #include "properties.h"
@@ -36,7 +38,7 @@ void KeySequenceEdit::keyPressEvent(QKeyEvent* event)
     // by not allowing multiple shortcuts,
     // the Qt bug that makes Meta a non-modifier is worked around
     clear();
-    QKeySequenceEdit::keyPressEvent(event);
+    QLineEdit::keyPressEvent(event);
 }
 
 Delegate::Delegate (QObject *parent)
@@ -74,49 +76,51 @@ bool Delegate::eventFilter(QObject *object, QEvent *event)
     return QStyledItemDelegate::eventFilter (object, event);
 }
 
+void PropertiesDialog::saveSizeOnExitStateChanged(int state)
+{
+    fixedSizeLabel->setEnabled(state == Qt::Unchecked);
+    xLabel->setEnabled(state == Qt::Unchecked);
+    fixedWithSpinBox->setEnabled(state == Qt::Unchecked);
+    fixedHeightSpinBox->setEnabled(state == Qt::Unchecked);
+    getCurrentSizeButton->setEnabled(state == Qt::Unchecked);
+}
+
+void PropertiesDialog::getCurrentSizeClicked()
+{
+    QWidget *pw = parentWidget();
+    if (pw != nullptr)
+    {
+        QSize pSize = pw->window()->geometry().size();
+        fixedWithSpinBox->setValue(pSize.width());
+        fixedHeightSpinBox->setValue(pSize.height());
+    }
+}
+
 PropertiesDialog::PropertiesDialog(QWidget *parent)
     : QDialog(parent)
 {
     setupUi(this);
 
-    connect(buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked,
-            this, &PropertiesDialog::apply);
-    connect(changeFontButton, &QPushButton::clicked,
-            this, &PropertiesDialog::changeFontButton_clicked);
-    connect(chooseBackgroundImageButton, &QPushButton::clicked,
-            this, &PropertiesDialog::chooseBackgroundImageButton_clicked);
+    connect(buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
+        this, SLOT(apply()));
+    connect(changeFontButton, SIGNAL(clicked()),
+        this, SLOT(changeFontButton_clicked()));
+    connect(chooseBackgroundImageButton, SIGNAL(clicked()),
+        this, SLOT(chooseBackgroundImageButton_clicked()));
 
     // fixed size
-    connect(saveSizeOnExitCheckBox, &QCheckBox::stateChanged, [this] (int state) {
-        fixedSizeLabel->setEnabled(state == Qt::Unchecked);
-        xLabel->setEnabled(state == Qt::Unchecked);
-        fixedWithSpinBox->setEnabled(state == Qt::Unchecked);
-        fixedHeightSpinBox->setEnabled(state == Qt::Unchecked);
-        getCurrentSizeButton->setEnabled(state == Qt::Unchecked);
-    });
-    connect(getCurrentSizeButton, &QAbstractButton::clicked, [this, parent] {
-        if (parent != nullptr)
-        {
-            QSize pSize = parent->window()->geometry().size();
-            fixedWithSpinBox->setValue(pSize.width());
-            fixedHeightSpinBox->setValue(pSize.height());
-        }
-    });
+    connect(saveSizeOnExitCheckBox, SIGNAL(stateChanged(int)),
+        this, SLOT(saveSizeOnExitStateChanged(int)));
+    connect(getCurrentSizeButton, SIGNAL(clicked()),
+        this, SLOT(getCurrentSizeClicked()));
+
     QSize ag;
     QSize minWinSize(0, 0);
     if (parent != nullptr)
     {
         minWinSize = parent->minimumSize();
-        if (QWindow *win = parent->windowHandle())
-        {
-            if (QScreen *sc = win->screen())
-            {
-                ag = sc->availableVirtualGeometry().size()
-                     // also consider the parent frame thickness because the parent window is fully formed
-                     - (parent->window()->frameGeometry().size()
-                        - parent->window()->geometry().size());
-            }
-        }
+        QDesktopWidget *desktop = QApplication::desktop();
+        ag = desktop->availableGeometry(parent).size();
     }
     fixedWithSpinBox->setMinimum(minWinSize.width());
     fixedHeightSpinBox->setMinimum(minWinSize.height());
@@ -128,7 +132,7 @@ PropertiesDialog::PropertiesDialog(QWidget *parent)
 
     QStringList emulations = QTermWidget::availableKeyBindings();
     QStringList colorSchemes = QTermWidget::availableColorSchemes();
-    colorSchemes.sort(Qt::CaseInsensitive);
+    qSort(colorSchemes.begin(), colorSchemes.end());
 
     listWidget->setCurrentRow(0);
     // resize the list widget to its content
@@ -235,7 +239,9 @@ PropertiesDialog::PropertiesDialog(QWidget *parent)
     audibleBellCheckBox->setEnabled(false);
 #endif
 
-    termComboBox->setCurrentText(Properties::Instance()->term);
+    int termIdx = termComboBox->findText(Properties::Instance()->term);
+    if (termIdx >= 0)
+        termComboBox->setCurrentIndex(termIdx);
 
     handleHistoryLineEdit->setText(Properties::Instance()->handleHistoryCommand);
 
@@ -254,21 +260,21 @@ PropertiesDialog::PropertiesDialog(QWidget *parent)
     dropShortCutEdit = new KeySequenceEdit();
     dropShortCutFormLayout->setWidget(0, QFormLayout::FieldRole, dropShortCutEdit);
     dropShortCutEdit->installEventFilter(this);
-    dropShortCutEdit->setKeySequence(Properties::Instance()->dropShortCut);
+    dropShortCutEdit->setText(Properties::Instance()->dropShortCut.toString(QKeySequence::NativeText));
 
     useBookmarksCheckBox->setChecked(Properties::Instance()->useBookmarks);
     bookmarksLineEdit->setText(Properties::Instance()->bookmarksFile); // also needed by openBookmarksFile()
-    connect(bookmarksLineEdit, &QLineEdit::editingFinished,
-            this, &PropertiesDialog::bookmarksPathEdited); // manual editing of bookmarks file path
+    connect(bookmarksLineEdit, SIGNAL(editingFinished()),
+        this, SLOT(bookmarksPathEdited())); // manual editing of bookmarks file path
     openBookmarksFile();
-    connect(bookmarksButton, &QPushButton::clicked,
-            this, &PropertiesDialog::bookmarksButton_clicked);
+    connect(bookmarksButton, SIGNAL(clicked()),
+        this, SLOT(bookmarksButton_clicked()));
     exampleBookmarksButton = nullptr;
 #ifdef APP_DIR
     exampleBookmarksButton = new QPushButton(tr("Examples"));
     FindBookmarkLayout->addWidget(exampleBookmarksButton);
-    connect(exampleBookmarksButton, &QPushButton::clicked,
-            this, &PropertiesDialog::bookmarksButton_clicked);
+    connect(exampleBookmarksButton, SIGNAL(clicked()),
+        this, SLOT(bookmarksButton_clicked()));
 #endif
 
     terminalPresetComboBox->setCurrentIndex(Properties::Instance()->terminalsPreset);
@@ -282,10 +288,7 @@ PropertiesDialog::PropertiesDialog(QWidget *parent)
     confirmMultilinePasteCheckBox->setChecked(Properties::Instance()->confirmMultilinePaste);
 
     // save the size on canceling too (it's saved on accepting by apply())
-    connect(this, &QDialog::rejected, [this] {
-        Properties::Instance()->prefDialogSize = size();
-        Properties::Instance()->saveSettings();
-    });
+    connect(this, SIGNAL(rejected()), this, SLOT(onRejected()));
 
     // restore its size while fitting it into available desktop geometry
     QSize s;
@@ -299,6 +302,11 @@ PropertiesDialog::PropertiesDialog(QWidget *parent)
         resize(s);
 }
 
+void PropertiesDialog::onRejected()
+{
+    Properties::Instance()->prefDialogSize = size();
+    Properties::Instance()->saveSettings();
+}
 
 PropertiesDialog::~PropertiesDialog()
 {
@@ -376,7 +384,7 @@ void PropertiesDialog::apply()
     Properties::Instance()->dropKeepOpen = dropKeepOpenCheckBox->isChecked();
     Properties::Instance()->dropHeight = dropHeightSpinBox->value();
     Properties::Instance()->dropWidth = dropWidthSpinBox->value();
-    Properties::Instance()->dropShortCut = dropShortCutEdit->keySequence();
+    Properties::Instance()->dropShortCut = QKeySequence(dropShortCutEdit->text());
 
     Properties::Instance()->useBookmarks = useBookmarksCheckBox->isChecked();
     saveBookmarksFile();
@@ -477,7 +485,7 @@ void PropertiesDialog::setupShortcuts()
         QString txt = keyAction->text();
         Properties::removeAccelerator(txt);
         QTableWidgetItem *itemName = new QTableWidgetItem(txt);
-        QTableWidgetItem *itemShortcut = new QTableWidgetItem( sequenceStrings.join(QLatin1Char('|')) );
+        QTableWidgetItem *itemShortcut = new QTableWidgetItem( sequenceStrings.join(QLatin1String("|")) );
 
         itemName->setFlags( itemName->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable );
 
@@ -566,7 +574,7 @@ void PropertiesDialog::openBookmarksFile()
         content = QString::fromLatin1("<qterminal>\n  <group name=\"Change Directory\">\n    <command name=\"Home\" value=\"cd $HOME\"/>\n  </group>\n  <group name=\"File Manager\">\n    <command name=\"Open here\" value=\"xdg-open $(pwd)\"/>\n  </group>\n</qterminal>\n");
     }
     else {
-        content = QString::fromUtf8(f.readAll());
+        content = QString::fromUtf8(f.readAll().constData());
     }
 
     bookmarkPlainEdit->setPlainText(content);
@@ -611,7 +619,7 @@ void PropertiesDialog::saveBookmarksFile()
         QMessageBox::StandardButton btn = QMessageBox::Yes;
         if (fromAppDir) {
             btn = QMessageBox::question(this, tr("Question"), tr("Do you want to overwrite this bookmarks file?")
-                                                              + QLatin1String("\n%1").arg(fname));
+                                                              + QString::fromLatin1("\n%1").arg(fname));
         }
         else if (!fname.endsWith(QLatin1String(".xml"))) {
             btn =  QMessageBox::question(this, tr("Question"), tr("The name of bookmarks file does not end with '.xml'.\nAre you sure that you want to overwrite it?"));
@@ -623,7 +631,7 @@ void PropertiesDialog::saveBookmarksFile()
 
     if (!f.open(QFile::WriteOnly|QFile::Truncate)) {
         QMessageBox::warning(this, tr("Warning"), tr("Cannot write bookmarks to this file:")
-                                                  + QLatin1String("\n%1").arg(fname));
+                                                  + QString::fromLatin1("\n%1").arg(fname));
     }
     else {
         f.write(bookmarkPlainEdit->toPlainText().toUtf8());

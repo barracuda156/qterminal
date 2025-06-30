@@ -24,7 +24,6 @@
 class AbstractBookmarkItem;
 class BookmarksModel;
 
-
 class BookmarksWidget : public QWidget, Ui::BookmarksWidget
 {
     Q_OBJECT
@@ -44,8 +43,8 @@ private:
 private slots:
     void handleCommand(const QModelIndex& index);
     void filter(const QString& str);
+    void clearFilterEdit();
 };
-
 
 class BookmarksModel : public QAbstractItemModel
 {
@@ -76,4 +75,3 @@ private:
 };
 
 #endif
-

@@ -37,7 +37,6 @@ class TermWidgetImpl : public QTermWidget
 //        QMap< QString, QAction * > actionMap;
 
     public:
-
         TermWidgetImpl(TerminalConfig &cfg, QWidget * parent=nullptr);
         virtual ~TermWidgetImpl();
         void propertiesChanged();
@@ -52,7 +51,7 @@ class TermWidgetImpl : public QTermWidget
         void zoomReset();
         void customContextMenuCall(const QPoint & pos);
 
-    private slots:
+   private slots:
         void activateUrl(const QUrl& url, bool fromContextMenu);
         void bell();
 
@@ -61,7 +60,6 @@ class TermWidgetImpl : public QTermWidget
         ca_context* libcanberra_context;
 #endif
 };
-
 
 class TermWidget : public QWidget, public DBusAddressable
 {
@@ -99,8 +97,6 @@ class TermWidget : public QWidget, public DBusAddressable
         void termGetFocus(TermWidget * self);
         void termTitleChanged(QString titleText, QString icon);
 
-    public slots:
-
     protected:
         bool focusNextPrevChild(bool) override {
             // prevent focus change with Tab and, especially, Backtab
@@ -111,7 +107,7 @@ class TermWidget : public QWidget, public DBusAddressable
     private slots:
         void term_termGetFocus();
         void term_termLostFocus();
+        void onTitleChanged();
 };
 
 #endif
-

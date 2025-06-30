@@ -51,7 +51,7 @@ TermWidgetImpl::TermWidgetImpl(TerminalConfig &cfg, QWidget * parent)
 #endif
 {
     TermWidgetCount++;
-    QString name(QStringLiteral("TermWidget_%1"));
+    QString name(QLatin1String("TermWidget_%1"));
     setObjectName(name.arg(TermWidgetCount));
 
     setFlowControlEnabled(FLOW_CONTROL_ENABLED);
@@ -70,26 +70,27 @@ TermWidgetImpl::TermWidgetImpl(TerminalConfig &cfg, QWidget * parent)
             setArgs(shell);
     }
 
-    setEnvironment(QStringList(QStringLiteral("TERM=%1").arg(Properties::Instance()->term)));
+    setEnvironment(QStringList(QString::fromLatin1("TERM=%1").arg(Properties::Instance()->term)));
 
     setMotionAfterPasting(Properties::Instance()->m_motionAfterPaste);
     disableBracketedPasteMode(Properties::Instance()->m_disableBracketedPasteMode);
 
     setContextMenuPolicy(Qt::CustomContextMenu);
 
-    if(Properties::Instance()->swapMouseButtons2and3)
+    if (Properties::Instance()->swapMouseButtons2and3)
     {
-        connect(this, &QWidget::customContextMenuRequested,
-                this, &TermWidgetImpl::pasteSelection);
+        connect(this, SIGNAL(customContextMenuRequested(const QPoint &)),
+                this, SLOT(pasteSelection()));
     }
     else
     {
-        connect(this, &QWidget::customContextMenuRequested,
-                this, &TermWidgetImpl::customContextMenuCall);
+        connect(this, SIGNAL(customContextMenuRequested(const QPoint &)),
+                this, SLOT(customContextMenuCall(const QPoint &)));
     }
 
-    connect(this, &QTermWidget::urlActivated, this, &TermWidgetImpl::activateUrl);
-    connect(this, &QTermWidget::bell, this, &TermWidgetImpl::bell);
+    connect(this, SIGNAL(urlActivated(const QUrl &, bool)),
+            this, SLOT(activateUrl(const QUrl &, bool)));
+    connect(this, SIGNAL(bell()), this, SLOT(bell()));
 
     startShellProgram();
 }
@@ -183,22 +184,22 @@ void TermWidgetImpl::customContextMenuCall(const QPoint & pos)
         menu.addSeparator();
     }
 
-    menu.addAction(actions[QStringLiteral(COPY_SELECTION)]);
-    menu.addAction(actions[QStringLiteral(PASTE_CLIPBOARD)]);
-    menu.addAction(actions[QStringLiteral(PASTE_SELECTION)]);
-    menu.addAction(actions[QStringLiteral(ZOOM_IN)]);
-    menu.addAction(actions[QStringLiteral(ZOOM_OUT)]);
-    menu.addAction(actions[QStringLiteral(ZOOM_RESET)]);
+    menu.addAction(actions[QLatin1String(COPY_SELECTION)]);
+    menu.addAction(actions[QLatin1String(PASTE_CLIPBOARD)]);
+    menu.addAction(actions[QLatin1String(PASTE_SELECTION)]);
+    menu.addAction(actions[QLatin1String(ZOOM_IN)]);
+    menu.addAction(actions[QLatin1String(ZOOM_OUT)]);
+    menu.addAction(actions[QLatin1String(ZOOM_RESET)]);
     menu.addSeparator();
-    menu.addAction(actions[QStringLiteral(CLEAR_TERMINAL)]);
-    menu.addAction(actions[QStringLiteral(SPLIT_HORIZONTAL)]);
-    menu.addAction(actions[QStringLiteral(SPLIT_VERTICAL)]);
+    menu.addAction(actions[QLatin1String(CLEAR_TERMINAL)]);
+    menu.addAction(actions[QLatin1String(SPLIT_HORIZONTAL)]);
+    menu.addAction(actions[QLatin1String(SPLIT_VERTICAL)]);
     // warning TODO/FIXME: disable the action when there is only one terminal
-    menu.addAction(actions[QStringLiteral(SUB_COLLAPSE)]);
+    menu.addAction(actions[QLatin1String(SUB_COLLAPSE)]);
     menu.addSeparator();
-    menu.addAction(actions[QStringLiteral(TOGGLE_MENU)]);
-    menu.addAction(actions[QStringLiteral(HIDE_WINDOW_BORDERS)]);
-    menu.addAction(actions[QStringLiteral(PREFERENCES)]);
+    menu.addAction(actions[QLatin1String(TOGGLE_MENU)]);
+    menu.addAction(actions[QLatin1String(HIDE_WINDOW_BORDERS)]);
+    menu.addAction(actions[QLatin1String(PREFERENCES)]);
     menu.exec(mapToGlobal(pos));
 }
 
@@ -270,7 +271,7 @@ bool TermWidget::eventFilter(QObject * /*obj*/, QEvent * ev)
 
 TermWidget::TermWidget(TerminalConfig &cfg, QWidget * parent)
     : QWidget(parent),
-      DBusAddressable(QStringLiteral("/terminals"))
+      DBusAddressable(QLatin1String("/terminals"))
 {
 
     #ifdef HAVE_QDBUS
@@ -298,10 +299,14 @@ TermWidget::TermWidget(TerminalConfig &cfg, QWidget * parent)
 
     propertiesChanged();
 
-    connect(m_term, &QTermWidget::finished, this, &TermWidget::finished);
-    connect(m_term, &QTermWidget::termGetFocus, this, &TermWidget::term_termGetFocus);
-    connect(m_term, &QTermWidget::termLostFocus, this, &TermWidget::term_termLostFocus);
-    connect(m_term, &QTermWidget::titleChanged, this, [this] { emit termTitleChanged(m_term->title(), m_term->icon()); });
+    connect(m_term, SIGNAL(finished()), this, SIGNAL(finished()));
+    connect(m_term, SIGNAL(termGetFocus()), this, SLOT(term_termGetFocus()));
+    connect(m_term, SIGNAL(termLostFocus()), this, SLOT(term_termLostFocus()));
+    connect(m_term, SIGNAL(titleChanged()), this, SLOT(onTitleChanged()));
+}
+
+void TermWidget::onTitleChanged() {
+    emit termTitleChanged(m_term->title(), m_term->icon());
 }
 
 void TermWidget::propertiesChanged()

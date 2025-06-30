@@ -75,7 +75,7 @@ public:
     BookmarkRootItem()
         : AbstractBookmarkItem(AbstractBookmarkItem::Root)
     {
-        m_value = m_display = QStringLiteral("root");
+        m_value = m_display = QLatin1String("root");
     }
 };
 
@@ -89,7 +89,6 @@ public:
         m_display = name;
     }
 };
-
 
 class BookmarkGroupItem : public AbstractBookmarkItem
 {
@@ -116,7 +115,7 @@ public:
         QFile f(fname);
         if (!f.open(QIODevice::ReadOnly))
         {
-            //qDebug() << "Cannot open file" << fname;
+            // qDebug() << "Cannot open file" << fname;
             // TODO/FIXME: message box
             return;
         }
@@ -179,10 +178,9 @@ public:
 
     QString xmlPos()
     {
-        return m_pos.join(QLatin1Char('.'));
+        return m_pos.join(QLatin1String("."));
     }
 };
-
 
 BookmarksModel::BookmarksModel(QObject *parent)
     : QAbstractItemModel(parent),
@@ -267,7 +265,6 @@ QModelIndex BookmarksModel::index(int row, int column, const QModelIndex &parent
         return QModelIndex();
 }
 
-
 QModelIndex BookmarksModel::parent(const QModelIndex &index) const
 {
     if (!index.isValid())
@@ -320,7 +317,6 @@ bool BookmarksModel::setData(const QModelIndex &index, const QVariant &value,
 }
 #endif
 
-
 BookmarksWidget::BookmarksWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -331,15 +327,13 @@ BookmarksWidget::BookmarksWidget(QWidget *parent)
     treeView->header()->hide();
     setFocusProxy(filterEdit);
 
-    connect(treeView, &QTreeView::activated,
-            this, &BookmarksWidget::handleCommand);
-    connect(filterEdit, &QLineEdit::textChanged,
-            this, &BookmarksWidget::filter);
+    connect(treeView, SIGNAL(activated(const QModelIndex &)),
+        this, SLOT(handleCommand(const QModelIndex &)));
+    connect(filterEdit, SIGNAL(textChanged(const QString &)),
+        this, SLOT(filter(const QString &)));
 
     QShortcut *clearFilter = new QShortcut(QKeySequence (Qt::Key_Escape), this);
-    connect(clearFilter, &QShortcut::activated, this, [this] {
-        filterEdit->clear();
-    });
+    connect(clearFilter, SIGNAL(activated()), this, SLOT(clearFilterEdit()));
 }
 
 BookmarksWidget::~BookmarksWidget()
@@ -385,4 +379,9 @@ void BookmarksWidget::filter(const QString& str)
             }
         }
     }
+}
+
+void BookmarksWidget::clearFilterEdit()
+{
+    filterEdit->clear();
 }

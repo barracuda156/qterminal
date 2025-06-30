@@ -10,6 +10,7 @@ class TabWidget;
 class AppModel : public QAbstractListModel
 {
     Q_OBJECT
+
 public:
     AppModel(QObject* parent, TabWidget* tabs);
 
@@ -46,6 +47,8 @@ protected:
 
 private:
     void showSwitcher();
+
+private slots:
     void timer();
 
 private:
@@ -54,4 +57,3 @@ private:
 };
 
 // -----------------------------------------------------------------------------------------------------------
-

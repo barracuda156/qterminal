@@ -55,24 +55,21 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent), tabNumerator(0), mTa
 
     tabBar()->installEventFilter(this);
 
-    connect(this, &TabWidget::tabCloseRequested, this, &TabWidget::removeTab);
-    connect(tabBar(), &QTabBar::tabMoved, this, &TabWidget::updateTabIndices);
-    connect(this, &TabWidget::tabRenameRequested, this, &TabWidget::renameSession);
-    connect(this, &TabWidget::tabTitleColorChangeRequested, this, &TabWidget::setTitleColor);
-    connect(mSwitcher.data(), &TabSwitcher::activateTab, this, &TabWidget::switchTab);
-    connect(this, &TabWidget::currentChanged, this, &TabWidget::onCurrentChanged);
+    connect(this, SIGNAL(tabCloseRequested(int)), this, SLOT(removeTab(int)));
+    connect(tabBar(), SIGNAL(tabMoved(int,int)), this, SLOT(updateTabIndices()));
+    connect(this, SIGNAL(tabRenameRequested(int)), this, SLOT(renameSession(int)));
+    connect(this, SIGNAL(tabTitleColorChangeRequested(int)), this, SLOT(setTitleColor(int)));
+    connect(mSwitcher.data(), SIGNAL(activateTab(int)), this, SLOT(switchTab(int)));
+    connect(this, SIGNAL(currentChanged(int)), this, SLOT(onCurrentChanged(int)));
 }
 
 TabWidget::~TabWidget()
-{
-    QObject::disconnect(mFocusConnection);
-}
+{}
 
 TermWidgetHolder * TabWidget::terminalHolder()
 {
     return reinterpret_cast<TermWidgetHolder*>(widget(currentIndex()));
 }
-
 
 int TabWidget::addNewTab(TerminalConfig config)
 {
@@ -85,10 +82,11 @@ int TabWidget::addNewTab(TerminalConfig config)
 
     TermWidgetHolder *console = new TermWidgetHolder(config, this);
     console->setWindowTitle(label);
-    connect(console, &TermWidgetHolder::finished, this, &TabWidget::removeFinished);
-    connect(console, &TermWidgetHolder::lastTerminalClosed, this, &TabWidget::removeFinished);
-    connect(console, &TermWidgetHolder::termTitleChanged, this, &TabWidget::onTermTitleChanged);
-    connect(this, &QTabWidget::currentChanged, this, &TabWidget::currentTitleChanged);
+    connect(console, SIGNAL(finished()), this, SLOT(removeFinished()));
+    connect(console, SIGNAL(lastTerminalClosed()), this, SLOT(removeFinished()));
+    connect(console, SIGNAL(termTitleChanged(const QString&, const QString&)),
+        this, SLOT(onTermTitleChanged(const QString&, const QString&)));
+    connect(this, SIGNAL(currentChanged(int)), this, SIGNAL(currentTitleChanged(int)));
 
     const int newIndex = (Properties::Instance()->m_openNewTabRightToActiveTab ? currentIndex() + 1 : count());
     const int index = insertTab(newIndex, console, label);
@@ -249,9 +247,9 @@ void TabWidget::contextMenuEvent(QContextMenuEvent *event)
     QMenu menu(this);
     QMap< QString, QAction * > actions = findParent<MainWindow>(this)->leaseActions();
 
-    QAction *close = menu.addAction(QIcon::fromTheme(QStringLiteral("document-close")), tr("Close session"));
+    QAction *close = menu.addAction(QIcon::fromTheme(QLatin1String("document-close")), tr("Close session"));
     QAction *rename = menu.addAction(actions[QLatin1String(RENAME_SESSION)]->text());
-    QAction *changeColor = menu.addAction(QIcon::fromTheme(QStringLiteral("color-management")), tr("Change title color"));
+    QAction *changeColor = menu.addAction(QIcon::fromTheme(QLatin1String("color-management")), tr("Change title color"));
     rename->setShortcut(actions[QLatin1String(RENAME_SESSION)]->shortcut());
     rename->blockSignals(true);
 
@@ -537,15 +535,9 @@ void TabWidget::preset2Horizontal()
     int ix = TabWidget::addNewTab(defaultConfig);
     TermWidgetHolder* term = reinterpret_cast<TermWidgetHolder*>(widget(ix));
 
-    // NOTE: When splitting happens, the focus changes. Therefore, we should switch to
-    // the 1st terminal only when the window is activated and the focus has really changed.
-    QObject::disconnect(mFocusConnection);
-    mFocusConnection = connect(term, &TermWidgetHolder::termFocusChanged, this, [this, term] {
-        QObject::disconnect(mFocusConnection);
-        term->directionalNavigation(NavigationDirection::Top);
-    });
-
     term->splitHorizontal(term->currentTerminal());
+    // switch to the 1st terminal
+    term->directionalNavigation(NavigationDirection::Left);
 }
 
 void TabWidget::preset2Vertical()
@@ -554,14 +546,9 @@ void TabWidget::preset2Vertical()
     int ix = TabWidget::addNewTab(defaultConfig);
     TermWidgetHolder* term = reinterpret_cast<TermWidgetHolder*>(widget(ix));
 
-    // see preset2Horizontal() for an explanation
-    QObject::disconnect(mFocusConnection);
-    mFocusConnection = connect(term, &TermWidgetHolder::termFocusChanged, this, [this, term] {
-        QObject::disconnect(mFocusConnection);
-        term->directionalNavigation(NavigationDirection::Left);
-    });
-
     term->splitVertical(term->currentTerminal());
+    // switch to the 1st terminal
+    term->directionalNavigation(NavigationDirection::Left);
 }
 
 void TabWidget::preset4Terminals()
@@ -569,21 +556,13 @@ void TabWidget::preset4Terminals()
     TerminalConfig defaultConfig;
     int ix = TabWidget::addNewTab(defaultConfig);
     TermWidgetHolder* term = reinterpret_cast<TermWidgetHolder*>(widget(ix));
-
-    // see preset2Horizontal() for an explanation
-    // Waiting for the first focus change is enough because, after it happens,
-    // the window is active and the other events happen serially.
-    QObject::disconnect(mFocusConnection);
-    mFocusConnection = connect(term, &TermWidgetHolder::termFocusChanged, this, [this, term] {
-        QObject::disconnect(mFocusConnection);
-        term->splitHorizontal(term->currentTerminal());
-        term->directionalNavigation(NavigationDirection::Left);
-        term->splitHorizontal(term->currentTerminal());
-        // switch to the 1st terminal (the focus is already changed)
-        term->directionalNavigation(NavigationDirection::Top);
-    });
-
     term->splitVertical(term->currentTerminal());
+    term->splitHorizontal(term->currentTerminal());
+    term->directionalNavigation(NavigationDirection::Left);
+
+    term->splitHorizontal(term->currentTerminal());
+    // switch to the 1st terminal
+    term->directionalNavigation(NavigationDirection::Top);
 }
 
 void TabWidget::showHideTabBar()

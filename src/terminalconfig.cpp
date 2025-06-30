@@ -41,7 +41,7 @@ QStringList TerminalConfig::getShell()
     QByteArray envShell = qgetenv("SHELL");
     if (envShell.constData() != nullptr)
     {
-        QString shellString = QString::fromLocal8Bit(envShell).trimmed();
+        QString shellString = QString::fromLocal8Bit(envShell.constData()).trimmed();
         if (!shellString.isEmpty())
             return QStringList{shellString};
     }

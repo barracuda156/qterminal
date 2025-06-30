@@ -116,7 +116,7 @@ void parse_args(int argc, char* argv[], QString& workdir, QStringList & shell_co
 
 int main(int argc, char *argv[])
 {
-    if (!qEnvironmentVariableIsEmpty("XPC_SERVICE_NAME")) {
+    if (!qgetenv("XPC_SERVICE_NAME").isEmpty()) {
         // On macOS, if qterminal.app is spawned by launchd (e.g., from Finder
         // or use `open qterminal.app`, $PWD is set to /. Workaround that by
         // go to $HOME first.
@@ -130,10 +130,9 @@ int main(int argc, char *argv[])
         qputenv("LANG", systemLocaleName.toLatin1());
     }
 
-    QApplication::setApplicationName(QStringLiteral("qterminal"));
-    QApplication::setApplicationVersion(QStringLiteral(QTERMINAL_VERSION));
-    QApplication::setOrganizationDomain(QStringLiteral("qterminal.org"));
-    QApplication::setDesktopFileName(QLatin1String("qterminal.desktop"));
+    QApplication::setApplicationName(QLatin1String("qterminal"));
+    QApplication::setApplicationVersion(QLatin1String(QTERMINAL_VERSION));
+    QApplication::setOrganizationDomain(QLatin1String("qterminal.org"));
     // Warning: do not change settings format. It can screw bookmarks later.
     QSettings::setDefaultFormat(QSettings::IniFormat);
 
@@ -157,41 +156,40 @@ int main(int argc, char *argv[])
     const QSettings settings;
     const QFileInfo customStyle = QFileInfo(
         QFileInfo(settings.fileName()).canonicalPath() +
-        QStringLiteral("/style.qss")
+        QLatin1String("/style.qss")
     );
     if (customStyle.isFile() && customStyle.isReadable())
     {
         QFile style(customStyle.canonicalFilePath());
         style.open(QFile::ReadOnly);
-        QString styleString = QLatin1String(style.readAll());
+        QString styleString = QString::fromLatin1(style.readAll().constData());
         app->setStyleSheet(styleString);
     }
 
     // icons
     /* setup our custom icon theme if there is no system theme (OS X, Windows) */
-    QCoreApplication::instance()->setAttribute(Qt::AA_UseHighDpiPixmaps); //Fix for High-DPI systems
     if (QIcon::themeName().isEmpty())
-        QIcon::setThemeName(QStringLiteral("QTerminal"));
+        QIcon::setThemeName(QLatin1String("QTerminal"));
 
     // translations
 
     // install the translations built-into Qt itself
     QTranslator qtTranslator;
-    qtTranslator.load(QStringLiteral("qt_") + QLocale::system().name(), QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+    qtTranslator.load(QLatin1String("qt_") + QLocale::system().name(), QLibraryInfo::location(QLibraryInfo::TranslationsPath));
     app->installTranslator(&qtTranslator);
 
     QTranslator translator;
     QString fname = QString::fromLatin1("qterminal_%1.qm").arg(QLocale::system().name().left(5));
 #ifdef TRANSLATIONS_DIR
     //qDebug() << "TRANSLATIONS_DIR: Loading translation file" << fname << "from dir" << TRANSLATIONS_DIR;
-    /*qDebug() << "load success:" <<*/ translator.load(fname, QString::fromUtf8(TRANSLATIONS_DIR), QStringLiteral("_"));
+    /*qDebug() << "load success:" <<*/ translator.load(fname, QString::fromUtf8(TRANSLATIONS_DIR), QLatin1String("_"));
 #endif
 #ifdef APPLE_BUNDLE
     QDir translations_dir = QDir(QApplication::applicationDirPath());
     translations_dir.cdUp();
-    if (translations_dir.cd(QStringLiteral("Resources/translations"))) {
+    if (translations_dir.cd(QLatin1String("Resources/translations"))) {
         //qDebug() << "APPLE_BUNDLE: Loading translator file" << fname << "from dir" << translations_dir.path();
-        /*qDebug() << "load success:" <<*/ translator.load(fname, translations_dir.path(), QStringLiteral("_"));
+        /*qDebug() << "load success:" <<*/ translator.load(fname, translations_dir.path(), QLatin1String("_"));
     } /*else {
         qWarning() << "Unable to find \"Resources/translations\" dir in" << translations_dir.path();
     }*/
@@ -286,20 +284,20 @@ void QTerminalApp::registerOnDbus()
                 "\teval `dbus-launch --auto-syntax`\n");
         return;
     }
-    QString serviceName = QStringLiteral("org.lxqt.QTerminal-%1").arg(getpid());
+    QString serviceName = QLatin1String("org.lxqt.QTerminal-%1").arg(getpid());
     if (!QDBusConnection::sessionBus().registerService(serviceName))
     {
         fprintf(stderr, "%s\n", qPrintable(QDBusConnection::sessionBus().lastError().message()));
         return;
     }
     new ProcessAdaptor(this);
-    QDBusConnection::sessionBus().registerObject(QStringLiteral("/"), this);
+    QDBusConnection::sessionBus().registerObject(QLatin1String("/"), this);
 }
 
 QList<QDBusObjectPath> QTerminalApp::getWindows()
 {
     QList<QDBusObjectPath> windows;
-    for (MainWindow *wnd : qAsConst(m_windowList))
+    foreach (MainWindow *wnd, m_windowList)
     {
         windows.push_back(wnd->getDbusPath());
     }

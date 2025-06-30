@@ -29,7 +29,7 @@ TabBar::TabBar(QWidget *parent)
     QFont f = font();
     f.setBold(true);
     setFont(f);
-    setStyleSheet(QStringLiteral("QTabBar::tab:!selected { font-weight: normal; }"));
+    setStyleSheet(QLatin1String("QTabBar::tab:!selected { font-weight: normal; }"));
 }
 
 void TabBar::setFixedWidth(bool fixedWidth)

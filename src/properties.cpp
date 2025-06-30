@@ -192,7 +192,7 @@ void Properties::saveSettings()
         const auto shortcuts = it.value()->shortcuts();
         for (const QKeySequence &shortcut : shortcuts)
             sequenceStrings.append(shortcut.toString());
-        m_settings->setValue(it.key(), sequenceStrings.join(QLatin1Char('|')));
+        m_settings->setValue(it.key(), sequenceStrings.join(QLatin1String("|")));
     }
     m_settings->endGroup();
 
@@ -383,7 +383,7 @@ void Properties::migrate_settings()
 void Properties::removeAccelerator(QString& str)
 {
     // Chinese, Japanese,...
-    str.remove(QRegularExpression(QStringLiteral("\\s*\\(&[a-zA-Z0-9]\\)\\s*")));
+    str.remove(QRegExp(QLatin1String("\\s*\\(&[a-zA-Z0-9]\\)\\s*")));
     // other languages
     str.remove(QLatin1Char('&'));
 }
